@@ -4,5 +4,8 @@ torch>=2.2
 transformers>=4.45,<5
 accelerate>=0.34
 safetensors>=0.4
+huggingface-hub>=0.34,<1
+psutil>=5.9
+numpy>=1.26,<3
+pillow>=10,<13
 pytest>=8,<9
-

@@ -1,66 +1,95 @@
-# Qwen2.5-0.5B-Instruct Functional Verifier
+# Universal Hugging Face Model Compatibility & Functional Verifier
 
-A GitHub-ready, evidence-producing Python agent and Streamlit dashboard for verifying whether Qwen/Qwen2.5-0.5B-Instruct is functional.
+A GitHub-ready Python agent and Streamlit dashboard that accepts a Hugging Face model URL or owner/model identifier, checks compatibility first, and only then performs a task-aware functional smoke test.
 
-## Actual result included
+## Why two phases?
 
-The bundled evidence was produced by loading and running the real model on CPU—not by mocking an answer.
+A model should not be downloaded or executed blindly. The compatibility agent first inspects small Hub metadata and config.json, detects blockers, and records a decision. Large weights are loaded only when the model and host appear compatible.
 
-- **Functional smoke test:** PASS
-- **Model revision:** 7ae557604adf67be50417f59c2c2f167def9a775
-- **Parameters loaded:** 494,032,768
-- **Exact instruction:** PASS (FUNCTIONAL_OK)
-- **Arithmetic contract:** FAIL (model said 98%; expected 95%)
-- **JSON semantics:** PASS
-- **Strict JSON without Markdown:** FAIL
-- **Verdict:** functional with quality caveats; not production-qualified
+## Preflight checks
 
-Results are specific to the recorded environment, model revision and prompts.
+- URL/repository identifier validation
+- Public, private, missing or gated access
+- Resolved immutable commit revision
+- Transformers config.json availability and parsing
+- Standard weight file availability and estimated size
+- Pipeline task and safe test-adapter support
+- Remote custom-code detection
+- Available disk, CPU RAM, CUDA and GPU memory
+- Estimated disk and CPU-memory needs
+- Actionable blocker remediation
 
-## Dashboard tabs
+HF tokens are held in memory and are never written to reports.
 
-1. Annotated verification workflow with sources
-2. Actual prompts, outputs, timing and assertions
-3. One-click live rerun
-4. TPM gist, risks and production launch gates
+## Automatically tested tasks
+
+- Text generation and text-to-text generation
+- Summarization and translation
+- Fill-mask
+- Text and token classification
+- Question answering
+- Feature extraction
+- Image classification
+- Audio classification and automatic speech recognition
+
+Models such as diffusion pipelines, GGUF-only repositories, adapters, multimodal chat systems and custom research architectures can need a model-specific adapter. They are reported as unsupported—not incorrectly classified as broken.
 
 ## Run locally
 
-Python 3.10–3.12 is recommended.
-
 ~~~bash
 python -m venv .venv
-source .venv/bin/activate       # Windows: .venv\Scripts\activate
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
 python -m pip install -r requirements.txt
-python run_verification.py
 streamlit run app.py
 ~~~
 
-The first execution downloads roughly 1 GB of public model files and may use around 2 GB process memory. No API key is required.
+Paste a model link into the sidebar, run preflight, review every check, and then run the functional test if enabled.
 
-## Deploy to Streamlit Community Cloud
+## Command line
 
-Push the extracted files to GitHub, create an app at https://share.streamlit.io/, and select app.py. Community Cloud resource limits may be too small for reliable live inference. The bundled evidence dashboard still works; local or larger hosted compute is recommended for reruns.
+Preflight without downloading weights:
 
-## Test without downloading the model
+~~~bash
+python run_verification.py https://huggingface.co/google/flan-t5-small --preflight-only
+~~~
+
+Preflight plus real functional inference:
+
+~~~bash
+python run_verification.py Qwen/Qwen2.5-0.5B-Instruct
+~~~
+
+Pinned revision and private/gated model:
+
+~~~bash
+python run_verification.py owner/model --revision COMMIT_SHA --token YOUR_READ_TOKEN
+~~~
+
+Only use --trust-remote-code after reviewing repository code:
+
+~~~bash
+python run_verification.py owner/custom-model --trust-remote-code
+~~~
+
+## Test the package
 
 ~~~bash
 pytest -q
-python -m compileall -q app.py qwen_verifier tests
+python -m compileall -q app.py qwen_verifier tests run_verification.py
 ~~~
 
-## Agent workflow
+## Important interpretation
 
-The verifier resolves the model identity, loads tokenizer and weights, applies the official chat template, performs deterministic inference, validates strict contracts, captures environment/timing/memory evidence, separates functional status from production readiness, and emits portable JSON.
+- **READY_TO_RUN** means the preflight found no known blocker.
+- **FUNCTIONAL** means the model loaded and returned a non-empty result for a small task-aware input.
+- Neither result proves production readiness.
+- Production qualification also needs representative accuracy, safety, reliability, concurrency, latency, throughput and cost testing.
 
-## Key references
+## References
 
-- [Qwen model card](https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct)
-- [Hugging Face Qwen2 documentation](https://huggingface.co/docs/transformers/main/en/model_doc/qwen2)
-- [Chat templates](https://huggingface.co/docs/transformers/main/en/chat_templating)
-- [PyTorch inference mode](https://pytorch.org/docs/stable/generated/torch.autograd.grad_mode.inference_mode.html)
+- [Hugging Face Hub API](https://huggingface.co/docs/huggingface_hub/package_reference/hf_api)
+- [Transformers pipeline guide](https://huggingface.co/docs/transformers/main/en/pipeline_tutorial)
+- [Custom models and remote code](https://huggingface.co/docs/transformers/main/en/custom_models)
 
-## License
-
-MIT. The Qwen model has its own Apache-2.0 license shown on its model card.
+The package includes the real Qwen2.5-0.5B-Instruct evidence from the original verifier as an example baseline.
 

@@ -1,23 +1,24 @@
-from qwen_verifier.verifier import evaluate_outputs, classify_report
+from qwen_verifier.verifier import normalize_model_id, infer_task, sample_for
 
-def sample(output2="95%", output3='{"model":"Qwen2.5-0.5B-Instruct","status":"functional"}'):
-    return [
-        {"case":"Instruction following","output":"FUNCTIONAL_OK"},
-        {"case":"Arithmetic quality","output":output2},
-        {"case":"Structured output","output":output3},
-    ]
+def test_repo_id():
+    assert normalize_model_id("Qwen/Qwen2.5-0.5B-Instruct") == ("Qwen/Qwen2.5-0.5B-Instruct", None)
 
-def test_all_contracts_pass():
-    checks=evaluate_outputs(sample())
-    assert all(checks.values())
+def test_hf_url_and_revision():
+    assert normalize_model_id("https://huggingface.co/google/flan-t5-small/tree/main") == ("google/flan-t5-small", "main")
 
-def test_markdown_json_is_semantically_valid_but_not_strict():
-    checks=evaluate_outputs(sample(output3='```json\n{"model":"Qwen2.5-0.5B-Instruct","status":"functional"}\n```'))
-    assert checks["json_semantics"] is True
-    assert checks["strict_json_no_markdown"] is False
+def test_rejects_non_hf_url():
+    try:
+        normalize_model_id("https://example.com/owner/model")
+    except ValueError as exc:
+        assert "huggingface.co" in str(exc)
+    else:
+        raise AssertionError("Non-HF URL must be rejected")
 
-def test_functional_is_not_same_as_production_ready():
-    report={"model_loaded":True,"generated_nonempty":True,"checks":{"a":True,"b":False}}
-    result=classify_report(report)
-    assert result["functional_smoke_test"]=="PASS"
-    assert result["production_ready"] is False
+def test_task_inference():
+    assert infer_task(None, {"architectures":["Qwen2ForCausalLM"]}) == "text-generation"
+    assert infer_task("sentiment-analysis", {}) == "text-classification"
+
+def test_text_samples():
+    prompt, kwargs = sample_for("text-generation")
+    assert prompt and kwargs["do_sample"] is False
+
