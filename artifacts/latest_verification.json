@@ -1,0 +1,62 @@
+{
+  "timestamp_utc": "2026-09-17T23:21:43Z",
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+  "model_loaded": true,
+  "generated_nonempty": true,
+  "checks": {
+    "exact_instruction": true,
+    "arithmetic_95_percent": false,
+    "json_semantics": true,
+    "strict_json_no_markdown": false
+  },
+  "environment": {
+    "python": "3.12.14",
+    "torch": "2.14.0+cu130",
+    "transformers": "4.57.6",
+    "device": "cpu",
+    "platform": "Linux-6.18.44-x86_64-with-glibc2.39",
+    "parameter_count": 494032768,
+    "peak_rss_mb": 1847.4
+  },
+  "timing_seconds": {
+    "tokenizer_load": 5.782,
+    "model_load": 0.297,
+    "total_generation": 2.612
+  },
+  "tests": [
+    {
+      "case": "Instruction following",
+      "prompt": "Return exactly this text and nothing else: FUNCTIONAL_OK",
+      "output": "FUNCTIONAL_OK",
+      "input_tokens": 37,
+      "output_tokens": 4,
+      "seconds": 0.331,
+      "tokens_per_second": 12.07
+    },
+    {
+      "case": "Arithmetic quality",
+      "prompt": "A deployment has 120 requests and 114 succeed. What is the success rate? Answer with only the percentage.",
+      "output": "98%",
+      "input_tokens": 53,
+      "output_tokens": 4,
+      "seconds": 0.331,
+      "tokens_per_second": 12.1
+    },
+    {
+      "case": "Structured output",
+      "prompt": "Return valid JSON with keys model and status, using values Qwen2.5-0.5B-Instruct and functional.",
+      "output": "```json\n{\n  \"model\": \"Qwen2.5-0.5B-Instruct\",\n  \"status\": \"functional\"\n}\n```",
+      "input_tokens": 52,
+      "output_tokens": 32,
+      "seconds": 1.95,
+      "tokens_per_second": 16.41
+    }
+  ],
+  "assessment": {
+    "functional_smoke_test": "PASS",
+    "strict_quality_gates": "2/4 passed",
+    "production_ready": false,
+    "verdict": "FUNCTIONAL WITH QUALITY CAVEATS"
+  }
+}
