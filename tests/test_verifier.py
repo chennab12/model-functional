@@ -1,4 +1,5 @@
 from qwen_verifier.verifier import normalize_model_id, infer_task, sample_for
+from qwen_verifier.lifecycle import canonical_output,improvement_percent,percentile
 
 def test_repo_id():
     assert normalize_model_id("Qwen/Qwen2.5-0.5B-Instruct") == ("Qwen/Qwen2.5-0.5B-Instruct", None)
@@ -22,3 +23,12 @@ def test_text_samples():
     prompt, kwargs = sample_for("text-generation")
     assert prompt and kwargs["do_sample"] is False
 
+def test_benchmark_math():
+    assert percentile([1,2,3,4],.5)==2.5
+    assert improvement_percent(10,8,True)==20
+    assert improvement_percent(10,12,False)==20
+
+def test_canonical_output_ignores_batch_container():
+    one=[{"generated_text":"same"}]
+    batch=[[{"generated_text":"same"}],[{"generated_text":"same"}]]
+    assert canonical_output(one)==canonical_output(batch)=="same"

@@ -4,6 +4,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 from qwen_verifier import GenericModelVerifier
+from qwen_verifier.ui_tabs import benchmark_tab,optimization_tab,portability_tab
 
 ROOT=Path(__file__).parent
 DEFAULT="https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct"
@@ -24,12 +25,19 @@ with st.sidebar:
 
 if "preflight" not in st.session_state:st.session_state.preflight=None
 if "result" not in st.session_state:st.session_state.result=None
+if "portability" not in st.session_state:st.session_state.portability=None
+if "benchmark" not in st.session_state:st.session_state.benchmark=None
+if "optimization" not in st.session_state:st.session_state.optimization=None
 if "key" not in st.session_state:st.session_state.key=None
 current_key=(model_input,revision,bool(token),trust_remote)
 if st.session_state.key and st.session_state.key!=current_key:
     st.session_state.preflight=None;st.session_state.result=None
+    st.session_state.portability=None;st.session_state.benchmark=None;st.session_state.optimization=None
 
-t1,t2,t3,t4=st.tabs(["🛡️ 1 · Compatibility preflight","▶️ 2 · Functional test","🧭 3 · How it works","🔬 4 · Included Qwen evidence"])
+t1,t2,t3,t4,t5,t6,t7=st.tabs([
+    "🛡️ 1 · Compatibility","▶️ 2 · Functional","🔁 3 · Portability",
+    "⏱️ 4 · Benchmark","⚙️ 5 · Optimize","🧭 6 · Guide","🔬 7 · Evidence",
+])
 with t1:
     st.subheader("Check setup before downloading model weights")
     st.write("Checks repository access, Transformers structure, task support, remote-code risk, disk, RAM, CUDA visibility and versioned identity.")
@@ -83,6 +91,15 @@ with t2:
             st.download_button("⬇️ Download complete evidence",json.dumps(r,indent=2,default=str),"hf_functional_report.json","application/json")
 
 with t3:
+    portability_tab(token,trust_remote)
+
+with t4:
+    benchmark_tab(token,trust_remote)
+
+with t5:
+    optimization_tab(token,trust_remote)
+
+with t6:
     st.subheader("Two-phase safety and compatibility workflow")
     guide=pd.DataFrame([
         ["1","🔗 Normalize input","Accept only huggingface.co URL or owner/model; preserve revision."],
@@ -102,7 +119,7 @@ with t3:
     st.info("Diffusion, GGUF-only, adapter-only, multimodal chat, custom research architectures and models needing special processors may require a project-specific adapter. The app reports that clearly instead of labeling the model defective.")
     st.markdown("[Hugging Face Hub API](https://huggingface.co/docs/huggingface_hub/package_reference/hf_api) · [Transformers pipelines](https://huggingface.co/docs/transformers/main/en/pipeline_tutorial) · [Custom model security](https://huggingface.co/docs/transformers/main/en/custom_models)")
 
-with t4:
+with t7:
     st.subheader("Previously executed Qwen2.5-0.5B-Instruct evidence")
     evidence=json.loads((ROOT/"artifacts/latest_verification.json").read_text())
     st.success("The included baseline proves the original package was run against the real Qwen model.")
@@ -110,4 +127,3 @@ with t4:
     st.caption("Use this as an example report. New models receive their own preflight and functional report.")
 
 st.caption("A functional smoke test is necessary but not sufficient for production: add golden-set quality, safety, reliability, performance, concurrency and cost evaluations.")
-

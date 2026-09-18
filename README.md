@@ -2,6 +2,16 @@
 
 A GitHub-ready Python agent and Streamlit dashboard that accepts a Hugging Face model URL or owner/model identifier, checks compatibility first, and only then performs a task-aware functional smoke test.
 
+The dashboard now covers the full verification lifecycle in separate tabs:
+
+1. Compatibility preflight
+2. Functional verification
+3. Portability
+4. Performance benchmarking
+5. Controlled optimization
+6. Annotated guide
+7. Included evidence
+
 ## Why two phases?
 
 A model should not be downloaded or executed blindly. The compatibility agent first inspects small Hub metadata and config.json, detects blockers, and records a decision. Large weights are loaded only when the model and host appear compatible.
@@ -85,6 +95,35 @@ python -m compileall -q app.py qwen_verifier tests run_verification.py
 - Neither result proves production readiness.
 - Production qualification also needs representative accuracy, safety, reliability, concurrency, latency, throughput and cost testing.
 
+## Portability, benchmarking and optimization
+
+The portability tab builds a backend matrix for CPU, NVIDIA CUDA, Intel XPU,
+Apple MPS, vLLM and OpenVINO. A detected backend is only readiness; portability
+is proven only after the same pinned revision and acceptance input run there.
+
+The benchmark tab separates model-load time from warmed steady-state inference
+and reports mean, p50, p95, p99, requests/second, approximate tokens/second and
+per-iteration evidence.
+
+The optimization tab runs a controlled baseline-versus-static-batching
+experiment with identical model, revision, input and output-token cap. It
+reports throughput change and preserves an output fingerprint. The fingerprint
+is an initial guard, not a replacement for a task-specific golden set.
+
+Every phase includes a per-step Intel Arc Pro B70 column. On B70:
+
+- use the Intel GPU driver and an XPU-enabled upstream PyTorch build;
+- require `torch.xpu.is_available()`;
+- use `xpu`, not CUDA, as the device;
+- synchronize `torch.xpu` before and after timed regions;
+- validate BF16/FP16 before adopting lower precision;
+- increase batching within the card's 32 GB VRAM;
+- record driver, runtime, device, dtype, VRAM and quality evidence;
+- use the Intel-XPU vLLM build or container for vLLM serving tests.
+
+Intel Extension for PyTorch is not required by this package; current Intel
+functionality is expected through upstream PyTorch.
+
 ## References
 
 - [Hugging Face Hub API](https://huggingface.co/docs/huggingface_hub/package_reference/hf_api)
@@ -92,4 +131,3 @@ python -m compileall -q app.py qwen_verifier tests run_verification.py
 - [Custom models and remote code](https://huggingface.co/docs/transformers/main/en/custom_models)
 
 The package includes the real Qwen2.5-0.5B-Instruct evidence from the original verifier as an example baseline.
-
