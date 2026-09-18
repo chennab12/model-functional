@@ -2,15 +2,39 @@
 
 A GitHub-ready Python agent and Streamlit dashboard that accepts a Hugging Face model URL or owner/model identifier, checks compatibility first, and only then performs a task-aware functional smoke test.
 
-The dashboard now covers the full verification lifecycle in separate tabs:
+The dashboard now covers the full verification lifecycle and decision views in separate tabs:
 
-1. Compatibility preflight
-2. Functional verification
-3. Portability
-4. Performance benchmarking
-5. Controlled optimization
-6. Annotated guide
-7. Included evidence
+1. Executive summary with evidence-backed KPIs, gates, risks and next steps
+2. Compatibility preflight
+3. Functional verification
+4. Portability
+5. Performance benchmarking
+6. Controlled optimization and qualification workbench
+7. Annotated guide and included evidence
+8. Privacy-first deployment analytics and UTC activity heat map
+9. Curated, deduplicated AI/ML news and signal-based trend inferences
+
+## Executive, analytics and news views
+
+The Executive tab rolls up the other tests without inventing results. Unrun
+blocking gates remain `NOT_CHECKED`, and the decision remains `HOLD`. It shows
+readiness, quality, security, p95 latency, throughput, risks, gaps and
+prioritized owners/actions.
+
+The Miscellaneous tab stores anonymous Streamlit session counts, reruns and
+interaction-based duration in first-party SQLite. It does not collect IP
+addresses, persistent identity cookies or browser fingerprints. The default
+database under `/tmp` can be ephemeral and is not shared across app replicas.
+For durable single-instance storage set:
+
+~~~bash
+export ANALYTICS_DB_PATH=/persistent-volume/model_verifier_analytics.db
+~~~
+
+The AI ML News tab reads a fixed allowlist of publisher RSS feeds, ranks for
+recency and source authority, removes duplicate titles, groups the result and
+caps it at 50 items. Projections are explicitly labeled as signal-based
+inferences. Allowlisting is a curated quality proxy, not a provable “top 1%.”
 
 The **Qualification workbench** contains ten additional nested tabs without
 overcrowding the primary lifecycle navigation:

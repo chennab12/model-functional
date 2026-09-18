@@ -1,6 +1,9 @@
 from qwen_verifier.verifier import normalize_model_id, infer_task, sample_for
 from qwen_verifier.lifecycle import canonical_output,improvement_percent,percentile
 from qwen_verifier.qualification import capacity,diagnose,quality_evaluate,security_review
+from qwen_verifier.analytics import analytics_summary,record_visit
+from qwen_verifier.executive import executive_summary
+from qwen_verifier.news import category,deduplicate
 import pandas as pd
 
 def test_repo_id():
@@ -53,3 +56,20 @@ def test_diagnosis_and_capacity():
 def test_security_review():
     _,score,decision=security_review({"resolved_revision":"abc","license":"apache-2.0","remote_code_detected":False,"gated":False,"weight_size_gb":1})
     assert score==100 and decision=="PASS"
+
+def test_executive_summary_keeps_missing_evidence_open():
+    result=executive_summary({})
+    assert result["verdict"]=="HOLD"
+    assert result["blocking_open"]>0
+
+def test_private_analytics_counts_anonymous_session(tmp_path):
+    db=str(tmp_path/"analytics.db")
+    record_visit("anon-1",db,100);record_visit("anon-1",db,110)
+    result=analytics_summary(db)
+    assert result["sessions"]==1 and result["page_views"]==2
+    assert result["avg_duration_seconds"]==10
+
+def test_news_grouping_and_deduplication():
+    assert category("New agent model released")=="Agents & Applications"
+    items=[{"title":"Same story"},{"title":"Same story!"},{"title":"Other"}]
+    assert len(deduplicate(items))==2

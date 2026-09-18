@@ -1,11 +1,14 @@
 from __future__ import annotations
 import json
+import uuid
 from pathlib import Path
 import pandas as pd
 import streamlit as st
 from qwen_verifier import GenericModelVerifier
 from qwen_verifier.ui_tabs import benchmark_tab,optimization_tab,portability_tab
 from qwen_verifier.advanced_tabs import render_qualification_workbench
+from qwen_verifier.analytics import record_visit
+from qwen_verifier.insights_tabs import render_analytics,render_executive_summary,render_news
 
 ROOT=Path(__file__).parent
 DEFAULT="https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct"
@@ -30,15 +33,22 @@ if "portability" not in st.session_state:st.session_state.portability=None
 if "benchmark" not in st.session_state:st.session_state.benchmark=None
 if "optimization" not in st.session_state:st.session_state.optimization=None
 if "key" not in st.session_state:st.session_state.key=None
+if "analytics_session_id" not in st.session_state:st.session_state.analytics_session_id=str(uuid.uuid4())
+try:record_visit(st.session_state.analytics_session_id)
+except Exception:pass
 current_key=(model_input,revision,bool(token),trust_remote)
 if st.session_state.key and st.session_state.key!=current_key:
     st.session_state.preflight=None;st.session_state.result=None
     st.session_state.portability=None;st.session_state.benchmark=None;st.session_state.optimization=None
 
-t1,t2,t3,t4,t5,t6,t7,t8=st.tabs([
+t0,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10=st.tabs([
+    "📊 Executive",
     "🛡️ 1 · Compatibility","▶️ 2 · Functional","🔁 3 · Portability",
     "⏱️ 4 · Benchmark","⚙️ 5 · Optimize","🏭 6 · Qualify","🧭 7 · Guide","🔬 8 · Evidence",
+    "📈 Miscellaneous","📰 AI ML news",
 ])
+with t0:
+    render_executive_summary()
 with t1:
     st.subheader("Check setup before downloading model weights")
     st.write("Checks repository access, Transformers structure, task support, remote-code risk, disk, RAM, CUDA visibility and versioned identity.")
@@ -139,5 +149,11 @@ with t8:
     st.success("The included baseline proves the original package was run against the real Qwen model.")
     st.json(evidence,expanded=False)
     st.caption("Use this as an example report. New models receive their own preflight and functional report.")
+
+with t9:
+    render_analytics()
+
+with t10:
+    render_news()
 
 st.caption("A functional smoke test is necessary but not sufficient for production: add golden-set quality, safety, reliability, performance, concurrency and cost evaluations.")
