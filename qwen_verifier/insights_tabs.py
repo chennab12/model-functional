@@ -49,7 +49,7 @@ def render_executive_summary():
     st.warning("Executive interpretation: QUALIFIED_FOR_POC is not production approval. Add workload-specific safety, reliability, privacy, cost, operational ownership and rollback gates.")
 
 def render_analytics():
-    st.subheader("📈 Miscellaneous · website analytics")
+    st.subheader("📈 Usage analytics")
     st.caption("Privacy-first operational analytics for this deployment; no IP address, cookie or browser fingerprint is collected by this package.")
     a=analytics_summary()
     c1,c2,c3,c4=st.columns(4)

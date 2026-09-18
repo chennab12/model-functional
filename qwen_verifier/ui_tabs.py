@@ -58,10 +58,12 @@ def benchmark_tab(token,trust_remote):
             except Exception as exc:status.update(label="Benchmark failed",state="error");st.exception(exc)
     b=st.session_state.benchmark
     if b:
-        m1,m2,m3,m4=st.columns(4)
-        m1.metric("Mean latency",f'{b["latency_seconds"]["mean"]} s');m2.metric("p95",f'{b["latency_seconds"]["p95"]} s')
-        m3.metric("Requests/s",b["throughput"]["requests_per_second"]);m4.metric("Approx tokens/s",b["throughput"]["approx_output_tokens_per_second"] or "n/a")
+        m1,m2,m3,m4,m5=st.columns(5)
+        m1.metric("p50 latency",f'{b["latency_seconds"]["p50"]} s');m2.metric("p95 latency",f'{b["latency_seconds"]["p95"]} s')
+        m3.metric("Requests/s",b["throughput"]["requests_per_second"]);m4.metric("Approx tokens/s",b["throughput"]["approx_output_tokens_per_second"] or "n/a");m5.metric("Error rate",f'{b.get("reliability",{}).get("error_rate_percent",0)}%')
+        x1,x2,x3=st.columns(3);x1.metric("p99",f'{b["latency_seconds"]["p99"]} s');x2.metric("Latency variation",f'{b["latency_seconds"].get("coefficient_of_variation_percent","—")}%');x3.metric("Peak accelerator memory",f'{b.get("resources",{}).get("peak_accelerator_memory_mb")} MB' if b.get("resources",{}).get("peak_accelerator_memory_mb") is not None else "Not available")
         st.line_chart(pd.DataFrame({"iteration":range(1,len(b["samples"])+1),"latency_seconds":b["samples"]}).set_index("iteration"))
+        st.caption(b.get("streaming",{}).get("explanation",""))
         st.download_button("⬇️ Benchmark report",json.dumps(b,indent=2,default=str),"hf_benchmark_report.json","application/json")
     st.caption("This is a Transformers pipeline microbenchmark. Use vLLM serve/bench for production serving concurrency.")
 

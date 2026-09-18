@@ -29,6 +29,19 @@ def sync_device(device:str)->None:
 def pipeline_device(device:str):
     return -1 if device=="cpu" else f"{device}:0"
 
+def reset_peak_memory(device:str)->None:
+    import torch
+    backend=getattr(torch,device,None)
+    if device in {"cuda","xpu"} and backend and hasattr(backend,"reset_peak_memory_stats"):backend.reset_peak_memory_stats()
+
+def peak_memory_mb(device:str)->float|None:
+    import torch
+    backend=getattr(torch,device,None)
+    if device in {"cuda","xpu"} and backend and hasattr(backend,"max_memory_allocated"):
+        try:return round(float(backend.max_memory_allocated())/1024**2,2)
+        except Exception:return None
+    return None
+
 def canonical_output(value:Any)->str:
     """Extract the first comparable semantic output from common pipelines."""
     if isinstance(value,list) and value:return canonical_output(value[0])
@@ -68,20 +81,24 @@ class BenchmarkAgent:
     def run(self,device:str="cpu",warmups:int=1,iterations:int=5,max_new_tokens:int=32,batch_size:int=1)->dict[str,Any]:
         from .verifier import sample_for
         if not available_devices().get(device):raise RuntimeError(f"{device} is not available in this environment.")
-        start=time.perf_counter(); pipe=self._load(device); load_s=time.perf_counter()-start
+        start=time.perf_counter(); pipe=self._load(device); load_s=time.perf_counter()-start;reset_peak_memory(device)
         sample,kwargs=sample_for(self.task,getattr(pipe,"tokenizer",None))
         if self.task in {"text-generation","text2text-generation","summarization","translation"}:kwargs["max_new_tokens"]=max_new_tokens
         inputs=[sample]*batch_size if batch_size>1 else sample
         for _ in range(warmups):pipe(inputs,**kwargs);sync_device(device)
-        lat=[]; outputs=[]; token_counts=[]
+        lat=[]; outputs=[]; token_counts=[];errors=[];last_output=None
         for _ in range(iterations):
-            sync_device(device);t=time.perf_counter();out=pipe(inputs,**kwargs);sync_device(device);elapsed=time.perf_counter()-t
-            lat.append(elapsed);outputs.append(repr(out)[:500])
-            if getattr(pipe,"tokenizer",None):
-                try:token_counts.append(len(pipe.tokenizer.encode(repr(out))))
-                except Exception:pass
+            try:
+                sync_device(device);t=time.perf_counter();out=pipe(inputs,**kwargs);sync_device(device);elapsed=time.perf_counter()-t
+                last_output=out;lat.append(elapsed);outputs.append(repr(out)[:500])
+                if getattr(pipe,"tokenizer",None):
+                    try:token_counts.append(len(pipe.tokenizer.encode(canonical_output(out))))
+                    except Exception:pass
+            except Exception as exc:errors.append(f'{type(exc).__name__}: {exc}')
+        if not lat:raise RuntimeError("All benchmark iterations failed: "+(errors[0] if errors else "unknown error"))
         total=sum(lat);requests=iterations*batch_size
-        return {"model":self.model_id,"revision":self.revision,"task":self.task,"device":device,"settings":{"warmups":warmups,"iterations":iterations,"batch_size":batch_size,"max_new_tokens":max_new_tokens},"model_load_seconds":round(load_s,3),"latency_seconds":{"mean":round(statistics.mean(lat),4),"p50":round(percentile(lat,.5),4),"p95":round(percentile(lat,.95),4),"p99":round(percentile(lat,.99),4)},"throughput":{"requests_per_second":round(requests/total,3),"approx_output_tokens_per_second":round(sum(token_counts)/total,2) if token_counts else None},"output_fingerprint":canonical_output(out) if outputs else None,"samples":lat,"note":"Pipeline-level benchmark; use vLLM serve/bench for production serving capacity."}
+        mean=statistics.mean(lat);std=statistics.stdev(lat) if len(lat)>1 else 0.0;successful_requests=len(lat)*batch_size
+        return {"model":self.model_id,"revision":self.revision,"task":self.task,"device":device,"settings":{"warmups":warmups,"iterations":iterations,"batch_size":batch_size,"max_new_tokens":max_new_tokens},"model_load_seconds":round(load_s,3),"latency_seconds":{"mean":round(mean,4),"min":round(min(lat),4),"p50":round(percentile(lat,.5),4),"p95":round(percentile(lat,.95),4),"p99":round(percentile(lat,.99),4),"max":round(max(lat),4),"stddev":round(std,4),"coefficient_of_variation_percent":round(100*std/mean,2) if mean else 0},"throughput":{"requests_per_second":round(successful_requests/total,3),"approx_output_tokens_per_second":round(sum(token_counts)/total,2) if token_counts else None},"reliability":{"successful_iterations":len(lat),"failed_iterations":len(errors),"error_rate_percent":round(100*len(errors)/iterations,2),"errors":errors[:3]},"resources":{"peak_accelerator_memory_mb":peak_memory_mb(device),"power_watts":None,"tokens_per_joule":None},"streaming":{"ttft_seconds":None,"inter_token_latency_seconds":None,"explanation":"Transformers pipeline is non-streaming; use the vLLM endpoint benchmark for TTFT and inter-token latency."},"output_fingerprint":canonical_output(last_output),"samples":lat,"note":"Pipeline microbenchmark with warm-up and synchronized timing. Use representative concurrency plus vLLM serve/bench for production capacity."}
 
 class OptimizationAgent:
     """Compare identical work at batch=1 and a larger batch; quality fingerprint retained."""

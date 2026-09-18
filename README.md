@@ -2,17 +2,32 @@
 
 A GitHub-ready Python agent and Streamlit dashboard that accepts a Hugging Face model URL or owner/model identifier, checks compatibility first, and only then performs a task-aware functional smoke test.
 
-The dashboard now covers the full verification lifecycle and decision views in separate tabs:
+Version 2 organizes the full verification lifecycle as a guided, multipage product:
 
-1. Executive summary with evidence-backed KPIs, gates, risks and next steps
-2. Compatibility preflight
-3. Functional verification
-4. Portability
-5. Performance benchmarking
-6. Controlled optimization and qualification workbench
-7. Annotated guide and included evidence
-8. Privacy-first deployment analytics and UTC activity heat map
-9. Curated, deduplicated AI/ML news and signal-based trend inferences
+1. **Executive overview** — evidence-backed KPIs, gates, risks and actions
+2. **Verify model** — guided Quick, Standard or Production workflow plus manual controls
+3. **Evaluate quality** — golden-set evaluation and decision scorecard
+4. **Performance & portability** — portability, benchmark and optimization
+5. **Production readiness** — security, vLLM, capacity, B70, diagnosis and CI/CD
+6. **Runs & reports** — persistent evidence, comparisons and included baseline
+7. **Insights & help** — usage analytics, curated AI/ML news and the annotated guide
+
+The guided workflow always runs metadata-only compatibility first, pauses for
+explicit approval before downloading weights, enforces a configurable maximum
+model-size guardrail, and never converts missing production evidence into a
+pass. Status language is consistent across the app: Not started, Running,
+Passed, Review required, Failed and Blocked.
+
+## Reliability and deployment
+
+- `runtime.txt` pins Streamlit Cloud to Python 3.12.
+- GitHub Actions tests Python 3.12 and 3.13, compiles the package, runs unit/UI
+  smoke tests, and executes a real metadata-only Qwen preflight.
+- The fresh-session AppTest protects against null-state and optional-dependency
+  regressions.
+- `RUN_STORE_PATH` controls durable SQLite run history; use a persistent mounted
+  path or replace the adapter with PostgreSQL for multi-replica production.
+- `ANALYTICS_DB_PATH` separately controls privacy-first site analytics storage.
 
 ## Executive, analytics and news views
 
@@ -21,7 +36,7 @@ blocking gates remain `NOT_CHECKED`, and the decision remains `HOLD`. It shows
 readiness, quality, security, p95 latency, throughput, risks, gaps and
 prioritized owners/actions.
 
-The Miscellaneous tab stores anonymous Streamlit session counts, reruns and
+The Usage Analytics view stores anonymous Streamlit session counts, reruns and
 interaction-based duration in first-party SQLite. It does not collect IP
 addresses, persistent identity cookies or browser fingerprints. The default
 database under `/tmp` can be ephemeral and is not shared across app replicas.
@@ -143,9 +158,12 @@ The portability tab builds a backend matrix for CPU, NVIDIA CUDA, Intel XPU,
 Apple MPS, vLLM and OpenVINO. A detected backend is only readiness; portability
 is proven only after the same pinned revision and acceptance input run there.
 
-The benchmark tab separates model-load time from warmed steady-state inference
-and reports mean, p50, p95, p99, requests/second, approximate tokens/second and
-per-iteration evidence.
+The benchmark separates model-load time from warmed synchronized inference and
+reports min/mean/p50/p95/p99/max, standard deviation, coefficient of variation,
+requests/second, approximate tokens/second, error rate, accelerator peak memory
+when available and per-iteration evidence. TTFT, inter-token latency, power and
+tokens/joule remain explicitly unavailable in the non-streaming Transformers
+microbenchmark; use the vLLM endpoint/benchmark path for those serving metrics.
 
 The optimization tab runs a controlled baseline-versus-static-batching
 experiment with identical model, revision, input and output-token cap. It

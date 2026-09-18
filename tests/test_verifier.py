@@ -5,6 +5,8 @@ from qwen_verifier.analytics import analytics_summary,record_visit
 from qwen_verifier.executive import executive_summary
 from qwen_verifier.news import category,deduplicate
 from qwen_verifier.insights_tabs import _heatmap_html
+from qwen_verifier.orchestrator import next_action,workflow_status
+from qwen_verifier.run_store import compare_runs,list_runs,save_run
 import pandas as pd
 
 def test_repo_id():
@@ -83,3 +85,15 @@ def test_news_grouping_and_deduplication():
 def test_heatmap_has_no_matplotlib_dependency():
     output=_heatmap_html(pd.DataFrame({0:[0],1:[3]},index=["Mon"]))
     assert "rgba(31,119,180" in output and "3 events" in output
+
+def test_guided_workflow_stops_at_first_missing_gate():
+    assert next_action({},"Standard Qualification")=="Compatibility"
+    state={"preflight":{"decision":"READY_TO_RUN"},"result":{"functional_test":{"status":"PASS"}}}
+    assert next_action(state,"Standard Qualification")=="Portability"
+
+def test_persistent_run_history_and_comparison(tmp_path):
+    db=str(tmp_path/"runs.db")
+    first=save_run({"preflight":{"model_id":"owner/model","resolved_revision":"abc","decision":"READY_TO_RUN"}},"baseline",db)
+    second=save_run({"preflight":{"model_id":"owner/model","resolved_revision":"def","decision":"READY_TO_RUN"},"benchmark":{"device":"cpu","latency_seconds":{"p95":1.2},"throughput":{"requests_per_second":2.5}}},"candidate",db)
+    runs=list_runs(db);comparison=compare_runs(runs,[first,second])
+    assert len(runs)==2 and "candidate" in comparison.columns
