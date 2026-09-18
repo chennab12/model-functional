@@ -4,6 +4,7 @@ from qwen_verifier.qualification import capacity,diagnose,quality_evaluate,secur
 from qwen_verifier.analytics import analytics_summary,record_visit
 from qwen_verifier.executive import executive_summary
 from qwen_verifier.news import category,deduplicate
+from qwen_verifier.insights_tabs import _heatmap_html
 import pandas as pd
 
 def test_repo_id():
@@ -78,3 +79,7 @@ def test_news_grouping_and_deduplication():
     assert category("New agent model released")=="Agents & Applications"
     items=[{"title":"Same story"},{"title":"Same story!"},{"title":"Other"}]
     assert len(deduplicate(items))==2
+
+def test_heatmap_has_no_matplotlib_dependency():
+    output=_heatmap_html(pd.DataFrame({0:[0],1:[3]},index=["Mon"]))
+    assert "rgba(31,119,180" in output and "3 events" in output

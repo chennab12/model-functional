@@ -1,5 +1,6 @@
 """Streamlit views for leadership, site analytics and current AI/ML signals."""
 from __future__ import annotations
+import html
 import pandas as pd
 import streamlit as st
 from .analytics import analytics_summary
@@ -8,6 +9,19 @@ from .news import fetch_news
 
 def _state():
     return {k:st.session_state.get(k) for k in ("preflight","result","portability","benchmark","optimization","quality_summary","security_score","vllm_report")}
+
+def _heatmap_html(frame:pd.DataFrame)->str:
+    """Render a small accessible heat map without pandas' Matplotlib dependency."""
+    maximum=max(float(frame.to_numpy().max()),1.0)
+    header="".join(f'<th scope="col">{html.escape(str(column))}</th>' for column in frame.columns)
+    rows=[]
+    for index,row in frame.iterrows():
+        cells=[]
+        for value in row:
+            number=float(value);alpha=0.08+0.82*(number/maximum)
+            cells.append(f'<td style="background:rgba(31,119,180,{alpha:.3f});text-align:center" title="{number:g} events">{number:g}</td>')
+        rows.append(f'<tr><th scope="row">{html.escape(str(index))}</th>{"".join(cells)}</tr>')
+    return '<div style="overflow-x:auto"><table style="width:100%;border-collapse:separate;border-spacing:2px"><caption style="text-align:left">Darker cells indicate more activity.</caption><thead><tr><th scope="col">Day / hour</th>'+header+'</tr></thead><tbody>'+"".join(rows)+'</tbody></table></div>'
 
 def render_executive_summary():
     st.subheader("📊 Executive model-readiness summary")
@@ -51,7 +65,7 @@ def render_analytics():
     with right:
         st.markdown("#### UTC activity heat map")
         if a["heatmap"].empty:st.info("No activity available yet.")
-        else:st.dataframe(a["heatmap"].style.background_gradient(cmap="Blues"),use_container_width=True)
+        else:st.markdown(_heatmap_html(a["heatmap"]),unsafe_allow_html=True)
     st.markdown("#### Measurement boundaries")
     st.info("Anonymous sessions approximate both visitors and visits because this privacy-first mode does not set a persistent identity cookie. Duration updates only when a user interacts and Streamlit reruns. The default SQLite file is ephemeral on many cloud hosts; set `ANALYTICS_DB_PATH` to a persistent mounted volume, or replace this module with an approved analytics service for durable multi-instance reporting.")
 
