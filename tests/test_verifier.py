@@ -62,6 +62,11 @@ def test_executive_summary_keeps_missing_evidence_open():
     assert result["verdict"]=="HOLD"
     assert result["blocking_open"]>0
 
+def test_executive_summary_accepts_streamlit_none_state():
+    result=executive_summary({"security_score":None,"preflight":None,"result":None})
+    security=result["gates"].loc[result["gates"].Gate=="Security"].iloc[0]
+    assert security.Status=="NOT_CHECKED" and security.Evidence=="—/100"
+
 def test_private_analytics_counts_anonymous_session(tmp_path):
     db=str(tmp_path/"analytics.db")
     record_visit("anon-1",db,100);record_visit("anon-1",db,110)

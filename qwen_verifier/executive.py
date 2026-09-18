@@ -26,7 +26,7 @@ def executive_summary(state:dict[str,Any])->dict[str,Any]:
     if p.get("remote_code_detected"):risks.append(["Unreviewed model code","High","Medium","Review, pin, scan and approve repository code before execution."])
     if not q:risks.append(["Unknown task quality","High","High","Run a representative golden set with an explicit threshold."])
     if not b:risks.append(["Unknown production performance","Medium","High","Benchmark representative shapes, concurrency and percentile latency."])
-    if state.get("security_score",0)<80:risks.append(["Incomplete supply-chain review","High","Medium","Complete license, revision, artifact and remote-code controls."])
+    if (state.get("security_score") or 0)<80:risks.append(["Incomplete supply-chain review","High","Medium","Complete license, revision, artifact and remote-code controls."])
     risks.append(["Smoke-test overconfidence","High","Medium","Treat functional PASS as basic viability, not production qualification."])
     next_steps=[]
     if blocking_open:next_steps.append(["P0","Close every blocking compatibility, functional, quality and security gate.","Model owner"])

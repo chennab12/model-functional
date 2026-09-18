@@ -28,6 +28,7 @@ def quality_evaluate(df:pd.DataFrame)->tuple[pd.DataFrame,dict[str,Any]]:
 
 def scorecard(state:dict[str,Any],quality_threshold:float=95.0)->tuple[pd.DataFrame,str]:
     p=state.get("preflight") or {};f=(state.get("result") or {}).get("functional_test",{});q=state.get("quality_summary") or {};b=state.get("benchmark") or {};o=state.get("optimization") or {}
+    security_score=state.get("security_score")
     rows=[
         ["Compatibility",p.get("decision","NOT_CHECKED"),p.get("resolved_revision","—"),True],
         ["Functional",f.get("status","NOT_CHECKED"),f.get("output",{}).get("type","—"),True],
@@ -35,7 +36,7 @@ def scorecard(state:dict[str,Any],quality_threshold:float=95.0)->tuple[pd.DataFr
         ["Portability","PASS" if state.get("portability") else "NOT_CHECKED",f'{(state.get("portability") or {}).get("ready_targets","—")} ready targets',False],
         ["Performance","PASS" if b else "NOT_CHECKED",f'{b.get("latency_seconds",{}).get("p95","—")}s p95',False],
         ["Optimization",o.get("optimization_verdict","NOT_CHECKED"),f'{o.get("comparison",{}).get("throughput_improvement_percent","—")}% throughput',False],
-        ["Security","PASS" if state.get("security_score",0)>=80 else "NOT_CHECKED",f'{state.get("security_score","—")}/100',True],
+        ["Security","PASS" if (security_score or 0)>=80 else "NOT_CHECKED",f'{security_score if security_score is not None else "—"}/100',True],
     ]
     df=pd.DataFrame(rows,columns=["Gate","Status","Evidence","Blocking"])
     failed=df[(df.Blocking)&(df.Status.isin(["FAIL","BLOCKED","NOT_CHECKED"]))]
@@ -108,4 +109,3 @@ jobs:
       - run: pytest -q
       - run: python run_verification.py Qwen/Qwen2.5-0.5B-Instruct --preflight-only
 """
-
