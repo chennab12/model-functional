@@ -5,6 +5,7 @@ import pandas as pd
 import streamlit as st
 from qwen_verifier import GenericModelVerifier
 from qwen_verifier.ui_tabs import benchmark_tab,optimization_tab,portability_tab
+from qwen_verifier.advanced_tabs import render_qualification_workbench
 
 ROOT=Path(__file__).parent
 DEFAULT="https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct"
@@ -34,9 +35,9 @@ if st.session_state.key and st.session_state.key!=current_key:
     st.session_state.preflight=None;st.session_state.result=None
     st.session_state.portability=None;st.session_state.benchmark=None;st.session_state.optimization=None
 
-t1,t2,t3,t4,t5,t6,t7=st.tabs([
+t1,t2,t3,t4,t5,t6,t7,t8=st.tabs([
     "🛡️ 1 · Compatibility","▶️ 2 · Functional","🔁 3 · Portability",
-    "⏱️ 4 · Benchmark","⚙️ 5 · Optimize","🧭 6 · Guide","🔬 7 · Evidence",
+    "⏱️ 4 · Benchmark","⚙️ 5 · Optimize","🏭 6 · Qualify","🧭 7 · Guide","🔬 8 · Evidence",
 ])
 with t1:
     st.subheader("Check setup before downloading model weights")
@@ -65,6 +66,16 @@ with t1:
 
 with t2:
     st.subheader("Task-aware functional smoke test")
+    st.dataframe(pd.DataFrame([
+        ["1 · Resolve artifact","Use the pinned HF model and tokenizer revision.","Copy the same pinned artifacts to the B70 host; avoid mutable branches."],
+        ["2 · Check runtime","Confirm architecture and dependency support.","Install the validated Intel GPU driver and XPU-enabled upstream PyTorch."],
+        ["3 · Select device","CPU uses device=-1; NVIDIA uses CUDA.","B70 uses xpu:0 and must pass torch.xpu.is_available()."],
+        ["4 · Select precision","Start with the model's safe default dtype.","Validate BF16/FP16 on B70 against a known-good quality baseline."],
+        ["5 · Prepare input","Apply the same tokenizer, template and input shape.","Keep identical prompt/context/output limits so the B70 comparison is fair."],
+        ["6 · Execute inference","Use inference_mode and bounded generation.","Move tensors/model to XPU and synchronize torch.xpu before reading time."],
+        ["7 · Validate output","Require nonempty output plus task-specific assertions.","Compare B70 output against the same golden set and declared tolerance."],
+        ["8 · Record evidence","Save revision, versions, input, output and timings.","Also save B70 device, driver, precision, 32 GB VRAM usage and XPU runtime."],
+    ],columns=["Functional step","Simple annotation","Intel Arc Pro B70 difference"]),hide_index=True,use_container_width=True)
     p=st.session_state.preflight
     if not p:st.info("Run Compatibility Preflight in Tab 1 first.")
     elif not p.get("compatible"):st.error("Functional test is disabled because preflight has blocking findings.")
@@ -100,6 +111,9 @@ with t5:
     optimization_tab(token,trust_remote)
 
 with t6:
+    render_qualification_workbench()
+
+with t7:
     st.subheader("Two-phase safety and compatibility workflow")
     guide=pd.DataFrame([
         ["1","🔗 Normalize input","Accept only huggingface.co URL or owner/model; preserve revision."],
@@ -119,7 +133,7 @@ with t6:
     st.info("Diffusion, GGUF-only, adapter-only, multimodal chat, custom research architectures and models needing special processors may require a project-specific adapter. The app reports that clearly instead of labeling the model defective.")
     st.markdown("[Hugging Face Hub API](https://huggingface.co/docs/huggingface_hub/package_reference/hf_api) · [Transformers pipelines](https://huggingface.co/docs/transformers/main/en/pipeline_tutorial) · [Custom model security](https://huggingface.co/docs/transformers/main/en/custom_models)")
 
-with t7:
+with t8:
     st.subheader("Previously executed Qwen2.5-0.5B-Instruct evidence")
     evidence=json.loads((ROOT/"artifacts/latest_verification.json").read_text())
     st.success("The included baseline proves the original package was run against the real Qwen model.")

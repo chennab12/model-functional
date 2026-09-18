@@ -12,6 +12,24 @@ The dashboard now covers the full verification lifecycle in separate tabs:
 6. Annotated guide
 7. Included evidence
 
+The **Qualification workbench** contains ten additional nested tabs without
+overcrowding the primary lifecycle navigation:
+
+1. **Quality** — golden-set exact, contains, regex and JSON-validity gates
+2. **Scorecard** — executive blocking/non-blocking qualification decision
+3. **History** — capture and compare session runs
+4. **vLLM** — securely probe an existing OpenAI-compatible endpoint
+5. **Reproduce** — manifest and downloadable evidence ZIP
+6. **Diagnose** — error classification and actionable remediation
+7. **Security** — license, revision, remote-code and artifact readiness screen
+8. **Capacity** — workload, cost and power planning estimates
+9. **B70** — Intel Arc Pro B70 qualification checklist
+10. **CI/CD** — downloadable GitHub Actions qualification workflow
+
+The Functional tab also annotates every key step with its Intel Arc Pro B70
+difference: artifact handling, XPU runtime, device selection, precision,
+input parity, synchronization, quality comparison and evidence capture.
+
 ## Why two phases?
 
 A model should not be downloaded or executed blindly. The compatibility agent first inspects small Hub metadata and config.json, detects blockers, and records a decision. Large weights are loaded only when the model and host appear compatible.
